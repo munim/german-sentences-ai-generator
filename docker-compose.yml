@@ -3,18 +3,8 @@ services:
   ai_generator:
     build: .
     environment:
-      CHROME_REMOTE_DEBUGGING_URL: http://chrome:9222/json/version
-      # TERMIN_SEARCH_NAMES: '["Tao"]' #As JSON format inside single-quote
-      TERMIN_SEARCH_NAMES: '["Munim"]' #As JSON format inside single-quote
-      # TELEGRAM_NOTIFICATION_CHATID: '["1982309974"]'
-      TELEGRAM_NOTIFICATION_CHATID: '["1982309974", "5681593636"]'
-      SILENT_TIME_START: "00:00"
-      PAGE_DELAY_NORMAL_SEC: "10m"
-      PAGE_DELAY_REFRESH_SEC: "8m"
-      PAGE_DELAY_ERROR_SEC: "2m"
-      PAGE_INTERACTION_DELAY: "5s"
-      SILENT_TIME_END: "09:00"
-      TZ: Europe/Berlin
+      - GROQ_API_KEY: "${GROQ_API_KEY}"
+
     volumes:
       - ./logs:/app/logs
       - ./data:/app/data
