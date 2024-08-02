@@ -1,0 +1,94 @@
+{
+  "die Frau": {
+    "_A1": [
+      {
+        "de": "Die Frau ist sch\u00f6n.",
+        "en": "The woman is beautiful."
+      },
+      {
+        "de": "Die Frau hei\u00dft Anna.",
+        "en": "The woman's name is Anna."
+      },
+      {
+        "de": "Die Frau hat ein Buch.",
+        "en": "The woman has a book."
+      },
+      {
+        "de": "Die Frau ist krank.",
+        "en": "The woman is ill."
+      },
+      {
+        "de": "Die Frau ist meine Mutter.",
+        "en": "The woman is my mother."
+      }
+    ],
+    "A2": [
+      {
+        "de": "Die Frau trinkt Kaffee.",
+        "en": "The woman is drinking coffee."
+      },
+      {
+        "de": "Die Frau wohnt in Berlin.",
+        "en": "The woman lives in Berlin."
+      },
+      {
+        "de": "Die Frau f\u00e4hrt Auto.",
+        "en": "The woman drives a car."
+      },
+      {
+        "de": "Die Frau hat zwei Kinder.",
+        "en": "The woman has two children."
+      },
+      {
+        "de": "Die Frau ist sehr freundlich.",
+        "en": "The woman is very friendly."
+      }
+    ]
+  },
+  "der Mensch": {
+    "A1": [
+      {
+        "de": "Der Mensch ist gro\u00df.",
+        "en": "The person is tall."
+      },
+      {
+        "de": "Der Mensch hat Augen.",
+        "en": "The person has eyes."
+      },
+      {
+        "de": "Der Mensch h\u00f6rt Musik.",
+        "en": "The person listens to music."
+      },
+      {
+        "de": "Der Mensch isst ein Sandwich.",
+        "en": "The person is eating a sandwich."
+      },
+      {
+        "de": "Der Mensch hat Haare.",
+        "en": "The person has hair."
+      }
+    ],
+    "A2": [
+      {
+        "de": "Der Mensch braucht Wasser.",
+        "en": "The person needs water."
+      },
+      {
+        "de": "Der Mensch geht in den Park.",
+        "en": "The person goes to the park."
+      },
+      {
+        "de": "Der Mensch hat eine Tasche.",
+        "en": "The person has a bag."
+      },
+      {
+        "de": "Der Mensch schl\u00e4ft nicht.",
+        "en": "The person is not sleeping."
+      },
+      {
+        "de": "Der Mensch liest ein Buch.",
+        "en": "The person reads a book."
+      }
+    ]
+  }
+}
