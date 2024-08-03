@@ -1,3 +1,4 @@
+import re
 from tinydb import TinyDB, Query
 from groq import Groq
 import json
@@ -7,6 +8,7 @@ import time
 import logging
 import sys
 from logging.handlers import TimedRotatingFileHandler
+from thefuzz import fuzz
 
 
 def createLogger(__name__):
@@ -57,9 +59,11 @@ def generate_sentences(table_name):
             if ai_obj == None:
                 raise Exception("Failed to get AI response")
 
+            mapping = get_original_word_mapping(words, ai_obj)
             for w in ai_obj:
-                gen_db.remove(Query()['word_de'] == w['word_de'])
+                gen_db.remove(Query()['word_de'].matches(f".*{w['word_de'].rsplit(' ')[-1]}", flags=re.IGNORECASE))
                 logger.info(f"Updating status in DB for {w['word_de']}")
+                w['word_de'] = mapping[w['word_de']]
                 db.table(table_name).update({ 'updated': True }, Query()['word_de'] == w['word_de'])
 
             logger.info(f"Inserting data into gen_db")
@@ -85,8 +89,18 @@ def get_next_words(table_name, db, count):
     words = list(map(lambda d: d['word_de'], first_two_items))
     return words
 
+def get_original_word_mapping(words, ai_resp):
+    resp = {}
+    for w in words:
+        for ai_w in ai_resp:
+            if fuzz.ratio(w.rsplit(' ')[-1].lower(), ai_w['word_de'].rsplit(' ')[-1].lower()) > 80:
+                resp[ai_w['word_de']] = w
+                break
+    return resp
+
 def get_ai_response(words):
     ai_resp = None
+    words = list(map(lambda w: w.rsplit('/')[-1], words))
     try:
         client = Groq()
         completion = client.chat.completions.create(
