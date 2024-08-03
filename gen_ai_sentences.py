@@ -146,5 +146,8 @@ def convert_ai_response(ai_response):
 
 
 generate_sentences("nouns")
+generate_sentences("verbs")
+generate_sentences("adverbs")
+generate_sentences("adjectives")
 
 
