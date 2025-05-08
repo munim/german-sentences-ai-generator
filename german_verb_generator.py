@@ -297,14 +297,16 @@ class GermanVerbGenerator:
                     "past_participle": entry.get("de", {}).get("past_participle", ""),
                     "sentences": {
                         "present": entry.get("de", {}).get("sentences", {}).get("present") or f"Ich {entry.get('de', {}).get('verb', '')}.",
-                        "past": entry.get("de", {}).get("sentences", {}).get("past") or f"Ich habe {entry.get('de', {}).get('verb', '')}."
+                        "past": entry.get("de", {}).get("sentences", {}).get("past") or f"Ich habe {entry.get('de', {}).get('verb', '')}.",
+                        "past_participle": entry.get("de", {}).get("sentences", {}).get("past_participle") or f"Ich habe {entry.get('de', {}).get('past_participle', '')}."
                     }
                 },
                 "en": {
                     "verb": entry.get("en", {}).get("verb", ""),
                     "sentences": {
                         "present": entry.get("en", {}).get("sentences", {}).get("present", ""),
-                        "past": entry.get("en", {}).get("sentences", {}).get("past", "")
+                        "past": entry.get("en", {}).get("sentences", {}).get("past", ""),
+                        "past_participle": entry.get("en", {}).get("sentences", {}).get("past_participle", "")
                     }
                 }
             }
