@@ -9,9 +9,9 @@ import json
 import time
 import random
 import argparse
-import asyncio
 import httpx
 import csv
+import shutil
 from pathlib import Path
 from typing import List, Dict, Any, Optional, Union
 from dotenv import load_dotenv
@@ -58,7 +58,7 @@ class GermanVerbGenerator:
         self.prompt_template = prompt_template
         self.temp_dir = Path(config.temp_dir)
         
-    async def run(self) -> None:
+    def run(self) -> None:
         """Main function to process the verbs"""
         try:
             print("Starting German Verb Sentence Generator...")
@@ -68,7 +68,7 @@ class GermanVerbGenerator:
             
             # Read input file
             print(f"Reading verbs from {self.input_file}...")
-            verb_list = await self.read_verbs_from_file(self.input_file)
+            verb_list = self.read_verbs_from_file(self.input_file)
             print(f"Found {len(verb_list)} verbs to process.")
             
             # Split verbs into batches
@@ -83,7 +83,7 @@ class GermanVerbGenerator:
                 batch_number = i + 1
                 print(f"Processing batch {batch_number}/{len(verb_batches)}...")
                 
-                result = await self.process_verb_batch(verb_batch, batch_number)
+                result = self.process_verb_batch(verb_batch, batch_number)
                 
                 if result["success"]:
                     results.extend(result["data"])
@@ -92,38 +92,34 @@ class GermanVerbGenerator:
                 else:
                     print(f"Failed to process batch {batch_number}: {result['error']}")
                     # Save what we have so far to avoid losing progress
-                    await self.save_results(results)
+                    self.save_results(results)
                 
                 # Save incremental results
-                await self.save_results(results)
+                self.save_results(results)
             
             print(f"Processing complete! Generated sentences for {len(results)} verbs.")
             print(f"Results saved to {self.output_file}")
             
             # Clean up temp directory
-            await self.cleanup_temp_dir()
+            self.cleanup_temp_dir()
             
         except Exception as e:
             print(f"Error in main process: {e}")
             raise
     
-    async def read_verbs_from_file(self, file_path: str) -> List[Dict[str, str]]:
+    def read_verbs_from_file(self, file_path: str) -> List[Dict[str, str]]:
         """Read verbs from input CSV file"""
         try:
-            def read_csv_sync():
-                verbs_data = []
-                with open(file_path, 'r', encoding='utf-8') as f:
-                    reader = csv.reader(f)
-                    next(reader)  # Skip header row
-                    for row in reader:
-                        if len(row) >= 2:
-                            german_verb = row[0].strip()
-                            english_verb = row[1].strip()
-                            if german_verb and english_verb:
-                                verbs_data.append({"de": german_verb, "en": english_verb})
-                return verbs_data
-
-            verbs_data = await asyncio.to_thread(read_csv_sync)
+            verbs_data = []
+            with open(file_path, 'r', encoding='utf-8') as f:
+                reader = csv.reader(f)
+                next(reader)  # Skip header row
+                for row in reader:
+                    if len(row) >= 2:
+                        german_verb = row[0].strip()
+                        english_verb = row[1].strip()
+                        if german_verb and english_verb:
+                            verbs_data.append({"de": german_verb, "en": english_verb})
             
             if not verbs_data:
                 raise ValueError(f"No valid verb data found in {file_path}. Ensure it's a CSV with a header and at least two columns (German, English).")
@@ -135,15 +131,15 @@ class GermanVerbGenerator:
             print(f"Error reading input CSV file: {e}")
             raise
     
-    async def process_verb_batch(self, verbs: List[Dict[str, str]], batch_number: int) -> Dict[str, Any]:
+    def process_verb_batch(self, verbs: List[Dict[str, str]], batch_number: int) -> Dict[str, Any]:
         """Process a batch of verbs"""
         temp_file = self.temp_dir / f"batch_{batch_number}.json"
         
         # Check if this batch was already processed
         try:
             if temp_file.exists():
-                async with asyncio.to_thread(open, temp_file, 'r', encoding='utf-8') as f:
-                    temp_data = await asyncio.to_thread(f.read)
+                with open(temp_file, 'r', encoding='utf-8') as f:
+                    temp_data = f.read()
                 print(f"Found cached result for batch {batch_number}. Skipping API call.")
                 return {"success": True, "data": json.loads(temp_data)}
         except Exception:
@@ -151,19 +147,19 @@ class GermanVerbGenerator:
             pass
         
         # Create prompt for the batch
-        prompt = await self.create_prompt(verbs)
+        prompt = self.create_prompt(verbs)
         
         # Call the API with retries
         for attempt in range(1, self.config.max_retries + 1):
             try:
                 print(f"Batch {batch_number}, attempt {attempt}/{self.config.max_retries}...")
                 
-                response = await self.call_openrouter_api(prompt)
+                response = self.call_openrouter_api(prompt)
                 parsed_data = self.parse_response(response, verbs)
                 
                 # Cache the result
-                async with asyncio.to_thread(open, temp_file, 'w', encoding='utf-8') as f:
-                    await asyncio.to_thread(f.write, json.dumps(parsed_data, indent=2))
+                with open(temp_file, 'w', encoding='utf-8') as f:
+                    f.write(json.dumps(parsed_data, indent=2))
                 
                 return {"success": True, "data": parsed_data}
             except Exception as e:
@@ -176,19 +172,19 @@ class GermanVerbGenerator:
                 
                 if attempt < self.config.max_retries:
                     print(f"Retrying in {round(delay_with_jitter / 1000)} seconds...")
-                    await asyncio.sleep(delay_with_jitter / 1000)
+                    time.sleep(delay_with_jitter / 1000)
                 else:
                     return {"success": False, "error": str(e)}
     
-    async def create_prompt(self, verbs: List[Dict[str, str]]) -> str:
+    def create_prompt(self, verbs: List[Dict[str, str]]) -> str:
         """Create the prompt for the LLM"""
         # Format the verb list for the prompt, including English translations
         verb_list_formatted = '\n'.join([f"- {v['de']} ({v['en']})" for v in verbs])
         
         try:
             # Read prompt template from file
-            async with asyncio.to_thread(open, self.prompt_template, 'r', encoding='utf-8') as f:
-                template = await asyncio.to_thread(f.read)
+            with open(self.prompt_template, 'r', encoding='utf-8') as f:
+                template = f.read()
             
             # Replace placeholder with formatted verb list
             return template.replace("{{VERB_LIST}}", verb_list_formatted)
@@ -197,11 +193,11 @@ class GermanVerbGenerator:
             print(f"Error reading prompt template: {e}")
             raise ValueError(error_msg)
     
-    async def call_openrouter_api(self, prompt: str) -> Dict[str, Any]:
+    def call_openrouter_api(self, prompt: str) -> httpx.Response:
         """Call the OpenRouter API"""
         try:
-            async with httpx.AsyncClient(timeout=120.0) as client:
-                response = await client.post(
+            with httpx.Client(timeout=120.0) as client:
+                response = client.post(
                     "https://openrouter.ai/api/v1/chat/completions",
                     headers={
                         "Content-Type": "application/json",
@@ -228,22 +224,17 @@ class GermanVerbGenerator:
                 
                 raise ValueError(f"API request failed with status {response.status_code}: {error_data}")
             
-            response_data = response.json()
+            print(f"Raw LLM response content: {response.text}")
             
-            # Check if the model returned an error message
-            content = response_data.get("choices", [{}])[0].get("message", {}).get("content", "")
-            if "error" in content.lower() and "api" in content.lower():
-                raise ValueError(f"LLM returned error in content: {content[:100]}...")
-            
-            return response_data
+            return response
         except Exception as e:
             raise ValueError(f"OpenRouter API error: {str(e)}")
     
-    def parse_response(self, response: Dict[str, Any], original_verbs: List[Dict[str, str]]) -> List[Dict[str, Any]]:
+    def parse_response(self, response: httpx.Response, original_verbs: List[Dict[str, str]]) -> List[Dict[str, Any]]:
         """Parse the API response"""
         try:
             # Extract the content from the response
-            content = response["choices"][0]["message"]["content"]
+            content = response.json()["choices"][0]["message"]["content"]
             
             # Try to parse the JSON response
             try:
@@ -251,11 +242,19 @@ class GermanVerbGenerator:
             except json.JSONDecodeError:
                 # If direct parsing fails, try to extract JSON from the response
                 import re
-                json_match = re.search(r'\[[\s\S]*\]', content)
+                # Updated regex to handle markdown code blocks
+                json_match = re.search(r'```json\s*(\[[\s\S]*?])\s*```', content)
                 if json_match:
-                    parsed_data = json.loads(json_match.group(0))
+                    # Use the captured group (the JSON array)
+                    json_string = json_match.group(1)
+                    parsed_data = json.loads(json_string)
                 else:
-                    raise ValueError("Could not extract valid JSON from response")
+                    # Fallback to original regex if markdown not found
+                    json_match = re.search(r'\[[\s\S]*\]', content)
+                    if json_match:
+                        parsed_data = json.loads(json_match.group(0))
+                    else:
+                        raise ValueError("Could not extract valid JSON from response")
             
             # Validate that we have an array
             if not isinstance(parsed_data, list):
@@ -315,11 +314,12 @@ class GermanVerbGenerator:
             print(f"Error validating entry: {e}, {entry}")
             return None
     
-    async def save_results(self, results: List[Dict[str, Any]]) -> None:
+    def save_results(self, results: List[Dict[str, Any]]) -> None:
         """Save results to output file"""
         try:
-            async with asyncio.to_thread(open, self.output_file, 'w', encoding='utf-8') as f:
-                await asyncio.to_thread(f.write, json.dumps(results, indent=2))
+            # Save results to output file
+            with open(self.output_file, 'w', encoding='utf-8') as f:
+                f.write(json.dumps(results, indent=2))
         except Exception as e:
             print(f"Error saving results: {e}")
     
@@ -327,16 +327,15 @@ class GermanVerbGenerator:
         """Split array into chunks"""
         return [array[i:i + size] for i in range(0, len(array), size)]
     
-    async def cleanup_temp_dir(self) -> None:
+    def cleanup_temp_dir(self) -> None:
         """Clean up temporary directory"""
         try:
-            import shutil
-            await asyncio.to_thread(shutil.rmtree, self.temp_dir, ignore_errors=True)
+            shutil.rmtree(self.temp_dir, ignore_errors=True)
         except Exception as e:
             print(f"Warning: Failed to clean up temp directory: {e}")
 
 
-async def generate_default_env_file() -> None:
+def generate_default_env_file() -> None:
     """Generate default .env file if it doesn't exist"""
     env_path = Path("./.env")
     
@@ -357,8 +356,8 @@ SYSTEM_PROMPT=You are an expert German language teacher with deep knowledge of v
 LLM_TEMPERATURE=0.7
 MAX_TOKENS=4000
 """
-        async with asyncio.to_thread(open, env_path, 'w', encoding='utf-8') as f:
-            await asyncio.to_thread(f.write, default_env)
+        with open(env_path, 'w', encoding='utf-8') as f:
+            f.write(default_env)
         print(f"Created default .env file at {env_path}")
 
 
@@ -389,7 +388,7 @@ Environment variables (in .env file):
     print(help_text)
 
 
-async def main():
+def main():
     """Main entry point for the program"""
     parser = argparse.ArgumentParser(description="German Verb Sentence Generator", add_help=False)
     parser.add_argument("--input", "-i", help="Input CSV file with German and English verbs", required=False)
@@ -405,7 +404,7 @@ async def main():
         return
     
     # Initialize environment
-    await generate_default_env_file()
+    generate_default_env_file()
     
     # Check if prompt template exists
     if not Path(args.prompt).exists():
@@ -428,7 +427,7 @@ async def main():
         
         # Create and run the generator
         generator = GermanVerbGenerator(config, args.input, args.output, args.prompt)
-        await generator.run()
+        generator.run()
         
     except ValueError as e:
         print(f"Configuration error: {e}")
@@ -437,4 +436,4 @@ async def main():
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    main()
