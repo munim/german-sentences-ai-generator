@@ -10,14 +10,16 @@ You are an expert German language teacher specializing in verb usage. Analyze th
     "past_participle": "[Past participle (Partizip II)]",
     "sentences": {
       "present": "[Natural German sentence using present tense]",
-      "past": "[Natural German sentence using past tense]"
+      "past": "[Natural German sentence using past tense]",
+      "past_participle": "[Natural German sentence using past participle (Perfekt)]"
     }
   },
   "en": {
     "verb": "[English translation]",
     "sentences": {
       "present": "[English translation of present tense sentence]",
-      "past": "[English translation of past tense sentence]"
+      "past": "[English translation of past tense sentence]",
+      "past_participle": "[English translation of past participle sentence]"
     }
   }
 }
@@ -27,6 +29,7 @@ You are an expert German language teacher specializing in verb usage. Analyze th
    - Contain 8-12 words
    - Demonstrate proper verb conjugation
    - Include varied vocabulary and contexts
+   - Cover topics such as travel, finance, music, information technology, health, and fitness.
 
 3. DO NOT include explanations, markdown formatting, or any text outside the JSON array.
 
