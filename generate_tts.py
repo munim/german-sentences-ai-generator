@@ -1,0 +1,240 @@
+from TTS.api import TTS
+import os
+import torch
+import time
+from datetime import datetime
+from TTS.tts.configs.xtts_config import XttsConfig
+from TTS.tts.configs.xtts_config import XttsAudioConfig
+from TTS.tts.configs.xtts_config import XttsArgs
+from TTS.tts.configs.shared_configs import BaseAudioConfig
+from TTS.config.shared_configs import BaseDatasetConfig
+# Add necessary global for safe loading
+torch.serialization.add_safe_globals([XttsConfig, XttsAudioConfig, BaseDatasetConfig, XttsArgs, BaseAudioConfig])
+
+# Default model
+DEFAULT_MODEL = "tts_models/multilingual/multi-dataset/xtts_v2"
+
+def get_device():
+    """
+    Return the appropriate device (CUDA if available, otherwise CPU).
+    """
+    return "cuda" if torch.cuda.is_available() else "cpu"
+
+def list_available_speakers(model_name=DEFAULT_MODEL):
+    """
+    List all available speakers for the specified TTS model.
+    
+    :param model_name: Name of the TTS model to use
+    :return: List of available speakers
+    """
+    device = get_device()
+    print(f"Using device: {device}")
+    
+    # Initialize TTS and move to device
+    tts = TTS(model_name=model_name).to(device)
+    
+    # Check if model has predefined speaker references
+    speakers = []
+    if hasattr(tts.synthesizer.tts_model, 'speaker_manager') and hasattr(tts.synthesizer.tts_model.speaker_manager, 'speakers'):
+        speakers = tts.synthesizer.tts_model.speaker_manager.speakers
+    
+    print("Available speakers:")
+    for speaker in speakers:
+        print(f"- {speaker}")
+    
+    return speakers
+
+def text_to_speech(input_file, output_file, language="de", speaker=None, model_name=DEFAULT_MODEL, tts_model=None):
+    """
+    Converts text from an input file to speech and saves it as a WAV file.
+
+    :param input_file: Path to the text file containing input text.
+    :param output_file: Path to save the output WAV file.
+    :param language: Language code (e.g., "de" for German, "en" for English).
+    :param speaker: Speaker identifier. If None, uses the first available speaker.
+    :param model_name: Name of the TTS model to use
+    :param tts_model: Pre-loaded TTS model instance
+    :return: The TTS model instance
+    """
+    if not os.path.isfile(input_file):
+        raise FileNotFoundError(f"Input file {input_file} not found.")
+
+    with open(input_file, "r", encoding="utf-8") as file:
+        text = file.read().strip()
+
+    if not text:
+        raise ValueError("Input file is empty.")
+
+    # Use the provided model or initialize a new one
+    if tts_model is None:
+        device = get_device()
+        print(f"Using device: {device} with model: {model_name}")
+        
+        # Initialize TTS and move to device
+        tts_model = TTS(model_name=model_name).to(device)
+    
+    # If no speaker is provided, use the first available one
+    if speaker is None or speaker == "random":
+        speakers = []
+        if hasattr(tts_model.synthesizer.tts_model, 'speaker_manager') and hasattr(tts_model.synthesizer.tts_model.speaker_manager, 'speakers'):
+            speakers = tts_model.synthesizer.tts_model.speaker_manager.speakers
+        
+        if speakers:
+            speaker = speakers[0]
+            print(f"Using default speaker: {speaker}")
+        else:
+            raise ValueError("No speakers available in the model")
+
+    # Generate speech
+    tts_model.tts_to_file(
+        text=text,
+        file_path=output_file,
+        language=language,
+        speaker=speaker
+    )
+    print(f"Audio has been saved to {output_file}")
+    
+    return tts_model
+
+def text_string_to_speech(text, output_file, language="de", speaker=None, tts_model=None):
+    """
+    Converts a text string to speech and saves it as a WAV file.
+
+    :param text: String containing input text
+    :param output_file: Path to save the output WAV file
+    :param language: Language code (e.g., "de" for German, "en" for English)
+    :param speaker: Speaker identifier. If None, uses the first available speaker
+    :param tts_model: Pre-loaded TTS model instance
+    :return: The TTS model instance
+    """
+    if not text:
+        raise ValueError("Input text is empty.")
+
+    # Use the provided model or initialize a new one
+    if tts_model is None:
+        device = get_device()
+        print(f"Using device: {device}")
+        
+        # Initialize TTS and move to device
+        tts_model = TTS(model_name=DEFAULT_MODEL).to(device)
+    
+    # If no speaker is provided, use the first available one
+    if speaker is None or speaker == "random":
+        speakers = []
+        if hasattr(tts_model.synthesizer.tts_model, 'speaker_manager') and hasattr(tts_model.synthesizer.tts_model.speaker_manager, 'speakers'):
+            speakers = tts_model.synthesizer.tts_model.speaker_manager.speakers
+        
+        if speakers:
+            speaker = speakers[0]
+            print(f"Using speaker: {speaker}")
+        else:
+            raise ValueError("No speakers available in the model")
+
+    # Generate speech
+    tts_model.tts_to_file(
+        text=text,
+        file_path=output_file,
+        language=language,
+        speaker=speaker
+    )
+    print(f"Audio has been saved to {output_file}")
+    
+    return tts_model
+
+def interactive_mode(language="de", speaker=None, model_name=DEFAULT_MODEL):
+    """
+    Run in interactive mode, asking for text input and generating speech.
+    
+    :param language: Language code (e.g., "de" for German, "en" for English)
+    :param speaker: Speaker identifier. If None, uses the first available speaker
+    :param model_name: Name of the TTS model to use
+    """
+    print("Loading TTS model (this might take a while)...")
+    device = get_device()
+    tts_model = TTS(model_name=model_name).to(device)
+    print(f"Model loaded on {device}")
+    
+    # If no speaker is specified, determine the default one
+    if speaker is None or speaker == "random":
+        speakers = []
+        if hasattr(tts_model.synthesizer.tts_model, 'speaker_manager') and hasattr(tts_model.synthesizer.tts_model.speaker_manager, 'speakers'):
+            speakers = tts_model.synthesizer.tts_model.speaker_manager.speakers
+        
+        if speakers:
+            speaker = speakers[0]
+            print(f"Using default speaker: {speaker}")
+        else:
+            print("No specific speakers available in this model")
+    else:
+        print(f"Using speaker: {speaker}")
+    
+    print("\n=== Interactive TTS Mode ===")
+    print("Type your text and press Enter to generate speech.")
+    print("Type 'exit', 'quit', or press Ctrl+C to exit.")
+    
+    while True:
+        try:
+            user_input = input("\nEnter text (or 'exit' to quit): ")
+            if user_input.lower() in ['exit', 'quit']:
+                break
+                
+            if not user_input.strip():
+                print("Please enter some text.")
+                continue
+            
+            # Generate timestamp for unique filenames
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            output_file = f"output_{timestamp}.wav"
+            
+            # Generate speech from the text
+            tts_model.tts_to_file(
+                text=user_input,
+                file_path=output_file,
+                language=language,
+                speaker=speaker
+            )
+            print(f"Audio has been saved to {output_file}")
+            
+        except KeyboardInterrupt:
+            print("\nExiting interactive mode...")
+            break
+        except Exception as e:
+            print(f"Error: {e}")
+    
+    print("Interactive session ended.")
+
+
+if __name__ == "__main__":
+    import argparse
+
+    parser = argparse.ArgumentParser(description="Convert text to speech using Coqui TTS.")
+    parser.add_argument("input_file", type=str, nargs='?', help="Path to the input text file.")
+    parser.add_argument("output_file", type=str, nargs='?', help="Path to save the output WAV file.")
+    parser.add_argument("--language", type=str, default="de", help="Language code (default: de for German)")
+    parser.add_argument("--speaker", type=str, help="Speaker identifier")
+    parser.add_argument("--model", type=str, default=DEFAULT_MODEL, help=f"TTS model to use (default: {DEFAULT_MODEL})")
+    parser.add_argument("--list_speakers", action="store_true", help="List all available speakers")
+    parser.add_argument("--device", action="store_true", help="Show which device (CPU/CUDA) will be used")
+    parser.add_argument("--interactive", action="store_true", help="Run in interactive mode, asking for text input")
+
+    args = parser.parse_args()
+
+    if args.device:
+        print(f"Using device: {get_device()}")
+    elif args.list_speakers:
+        list_available_speakers(args.model)
+    elif args.interactive:
+        interactive_mode(args.language, args.speaker, args.model)
+    elif args.input_file and args.output_file:
+        try:
+            text_to_speech(
+                args.input_file, 
+                args.output_file, 
+                args.language, 
+                args.speaker, 
+                args.model
+            )
+        except Exception as e:
+            print(f"Error: {e}")
+    else:
+        parser.print_help()
